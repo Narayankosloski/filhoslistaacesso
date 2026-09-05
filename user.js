@@ -52,16 +52,75 @@
   var currentUid = null;
 
   /* ============================================================
-     GUARD DE AUTENTICAÇÃO
+     LOGIN / GUARD DE AUTENTICAÇÃO
   ============================================================ */
+  var authShell    = document.getElementById("auth-shell");
+  var appShell     = document.getElementById("app-shell");
+  var authError    = document.getElementById("auth-error");
+  var loginForm    = document.getElementById("login-form");
+  var loginBtn     = document.getElementById("login-btn");
+  var unsubscribeBlocks = null;
+
+  function showLogin(message) {
+    if (unsubscribeBlocks) { unsubscribeBlocks(); unsubscribeBlocks = null; }
+    appShell.classList.add("hidden");
+    authShell.classList.remove("hidden");
+    if (message) {
+      authError.textContent = message;
+      authError.classList.add("show");
+    } else {
+      authError.textContent = "";
+      authError.classList.remove("show");
+    }
+  }
+
+  function showApp() {
+    authShell.classList.add("hidden");
+    appShell.classList.remove("hidden");
+  }
+
+  function loginErrorMessage(err) {
+    switch (err && err.code) {
+      case "auth/invalid-email":       return "E-mail inválido.";
+      case "auth/user-disabled":       return "Esta conta foi desativada.";
+      case "auth/user-not-found":
+      case "auth/wrong-password":
+      case "auth/invalid-credential":  return "E-mail ou senha incorretos.";
+      case "auth/too-many-requests":   return "Muitas tentativas. Tente novamente mais tarde.";
+      case "auth/network-request-failed": return "Falha de conexão. Verifique sua internet.";
+      default:                          return "Não foi possível entrar. Tente novamente.";
+    }
+  }
+
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("login-email").value.trim();
+    var password = document.getElementById("login-password").value;
+    if (!email || !password) return;
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Entrando...";
+    authError.classList.remove("show");
+
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(function (err) {
+        showLogin(loginErrorMessage(err));
+      })
+      .finally(function () {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Entrar";
+      });
+  });
+
   auth.onAuthStateChanged(function (user) {
-    if (!user) { window.location.href = "index.html"; return; }
+    if (!user) { currentUid = null; showLogin(); return; }
 
     db.collection("users").doc(user.uid).get().then(function (snap) {
       var profile = snap.exists ? Object.assign({ id: snap.id }, snap.data()) : null;
 
       if (!profile || profile.role !== "user") {
-        window.location.href = profile && profile.role === "admin" ? "admin.html" : "index.html";
+        auth.signOut();
+        showLogin("Esta conta não tem permissão de usuário.");
         return;
       }
 
@@ -69,7 +128,10 @@
       document.getElementById("user-name").textContent = profile.name || user.email;
       document.getElementById("user-initial").textContent = (profile.name || user.email).charAt(0).toUpperCase();
 
-      db.collection("blocks")
+      showApp();
+
+      if (unsubscribeBlocks) unsubscribeBlocks();
+      unsubscribeBlocks = db.collection("blocks")
         .where("assignedTo", "==", user.uid)
         .orderBy("createdAt", "desc")
         .onSnapshot(function (snap2) {
@@ -79,6 +141,9 @@
           renderBlocos();
           renderHistorico();
         });
+    }).catch(function () {
+      auth.signOut();
+      showLogin("Erro ao verificar sua conta. Tente novamente.");
     });
   });
 
