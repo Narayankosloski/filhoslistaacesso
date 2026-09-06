@@ -259,7 +259,7 @@
     var ativos = blocksCache.filter(function (b) { return b.status !== STATUS.FINALIZADO; });
     var container = document.getElementById("lista-blocos");
     container.innerHTML = ativos.length ? ativos.map(renderBlockRow).join("")
-      : '<div class="empty-state"><h3>Nenhum bloco no momento</h3><p>Quando o administrador enviar uma tarefa, ela aparecerá aqui.</p></div>';
+      : '<div class="empty-state"><h3>Nenhuma lista no momento</h3><p>Quando o administrador enviar uma tarefa, ela aparecerá aqui.</p></div>';
     container.querySelectorAll(".list-row").forEach(function (row) {
       row.addEventListener("click", function () { openBlockDetail(row.dataset.id); });
     });
@@ -269,7 +269,7 @@
     var finalizados = blocksCache.filter(function (b) { return b.status === STATUS.FINALIZADO; });
     var container = document.getElementById("lista-historico");
     container.innerHTML = finalizados.length ? finalizados.map(renderBlockRow).join("")
-      : '<div class="empty-state"><h3>Nenhum bloco finalizado ainda</h3></div>';
+      : '<div class="empty-state"><h3>Nenhuma lista finalizada ainda</h3></div>';
     container.querySelectorAll(".list-row").forEach(function (row) {
       row.addEventListener("click", function () { openBlockDetail(row.dataset.id); });
     });
@@ -315,7 +315,7 @@
           status: step.next,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(function () {
-          toast('Bloco marcado como "' + STATUS_LABEL[step.next] + '".');
+          toast('lista marcada como "' + STATUS_LABEL[step.next] + '".');
           document.getElementById("modal-bloco").classList.remove("active");
         });
       };
