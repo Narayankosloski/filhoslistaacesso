@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">baba lindao filhos </string>
+    <string name="title_activity_main">baba lindao filhos </string>
+    <string name="package_name">com.babalindaoourdeus.usuario</string>
+    <string name="custom_url_scheme">com.babalindaoourdeus.usuario</string>
+</resources>

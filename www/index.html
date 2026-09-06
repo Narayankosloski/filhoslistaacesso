@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baba Lindao Deus</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===================== TELA DE LOGIN ===================== -->
+<div class="auth-shell" id="auth-shell">
+  <div class="auth-card">
+    <div class="auth-brand">Baba Lindao <span>Deus</span></div>
+    <p class="auth-sub">Entre para ver seus blocos</p>
+
+    <div class="auth-error" id="auth-error"></div>
+
+    <form id="login-form">
+      <div class="field-row">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" autocomplete="username" required>
+      </div>
+      <div class="field-row">
+        <label for="login-password">Senha</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="login-btn">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<div class="app-shell hidden" id="app-shell">
+
+  <aside class="sidebar">
+    <div class="brand">Baba Lindao <span>Deus</span></div>
+
+    <nav class="nav-group">
+      <div class="nav-item active" data-view="blocos"><span class="dot"></span>Blocos</div>
+      <div class="nav-item" data-view="historico"><span class="dot"></span>Histórico</div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-initial">U</div>
+        <div class="user-meta">
+          <div class="user-name" id="user-name">—</div>
+          <div class="user-role">Usuário</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost small" id="logout-btn" style="margin-top:8px;width:100%;justify-content:flex-start;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <section class="view active" id="view-blocos">
+      <div class="page-head">
+        <div>
+          <h1>Blocos</h1>
+          <p class="subtitle">Tarefas enviadas para você.</p>
+        </div>
+      </div>
+      <div class="list" id="lista-blocos"></div>
+    </section>
+
+    <section class="view" id="view-historico">
+      <div class="page-head">
+        <div>
+          <h1>Histórico</h1>
+          <p class="subtitle">Blocos que você já finalizou.</p>
+        </div>
+      </div>
+      <div class="list" id="lista-historico"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL: DETALHE DO BLOCO ===================== -->
+<div class="modal-backdrop" id="modal-bloco">
+  <div class="modal">
+    <h2 id="detalhe-bloco-nome" class="mb-1">Bloco</h2>
+    <p class="small mb-3" id="detalhe-bloco-descricao"></p>
+
+    <h3 class="mb-2">Itens</h3>
+    <div id="detalhe-bloco-itens" class="mb-3"></div>
+
+    <div class="flex-between">
+      <span class="badge" id="detalhe-bloco-status"></span>
+      <div class="flex gap-2">
+        <button class="btn btn-secondary" id="btn-fechar-detalhe">Fechar</button>
+        <button class="btn btn-primary" id="btn-avancar-status"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="user.js"></script>
+</body>
+</html>
