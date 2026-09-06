@@ -51,7 +51,15 @@
     finalizado: "Finalizado"
   };
 
+  var COMPRA_STATUS_LABEL = {
+    pendente:  "Aguardando aprovação",
+    aprovado:  "Aprovado para compra",
+    rejeitado: "Não será comprado",
+    comprado:  "Comprado"
+  };
+
   var blocksCache = [];
+  var comprasCache = [];
   var currentBlockId = null;
   var currentUid = null;
 
@@ -64,9 +72,11 @@
   var loginForm    = document.getElementById("login-form");
   var loginBtn     = document.getElementById("login-btn");
   var unsubscribeBlocks = null;
+  var unsubscribeCompras = null;
 
   function showLogin(message) {
     if (unsubscribeBlocks) { unsubscribeBlocks(); unsubscribeBlocks = null; }
+    if (unsubscribeCompras) { unsubscribeCompras(); unsubscribeCompras = null; }
     appShell.classList.add("hidden");
     authShell.classList.remove("hidden");
     if (message) {
@@ -144,6 +154,17 @@
           blocksCache = blocks;
           renderBlocos();
           renderHistorico();
+        });
+
+      if (unsubscribeCompras) unsubscribeCompras();
+      unsubscribeCompras = db.collection("compras")
+        .where("requestedBy", "==", user.uid)
+        .orderBy("createdAt", "desc")
+        .onSnapshot(function (snap3) {
+          var compras = [];
+          snap3.forEach(function (d) { compras.push(Object.assign({ id: d.id }, d.data())); });
+          comprasCache = compras;
+          renderComprar();
         });
     }).catch(function () {
       auth.signOut();
@@ -245,9 +266,23 @@
 
     document.getElementById("detalhe-bloco-nome").textContent = b.name;
     document.getElementById("detalhe-bloco-descricao").textContent = b.description || "Sem descrição adicional.";
-    document.getElementById("detalhe-bloco-itens").innerHTML = b.items.map(function (i) {
-      return '<div class="item-line"><span class="item-name">' + i.itemName + '</span><span class="small muted">' + i.quantity + ' un.</span></div>';
+
+    document.getElementById("detalhe-bloco-itens").innerHTML = b.items.map(function (i, idx) {
+      return '<div class="item-line">' +
+        '<span class="item-name">' + i.itemName + '</span>' +
+        '<span class="small muted">' + i.quantity + ' un.</span>' +
+        '<label class="small muted" style="display:flex;align-items:center;gap:6px;margin-left:10px;white-space:nowrap;">' +
+        '<input type="checkbox" class="falta-check" data-idx="' + idx + '"' + (i.falta ? " checked" : "") + '> Falta' +
+        '</label>' +
+        '</div>';
     }).join("");
+
+    document.getElementById("detalhe-bloco-itens").querySelectorAll(".falta-check").forEach(function (chk) {
+      chk.addEventListener("change", function () {
+        toggleFalta(b, Number(chk.dataset.idx), chk.checked);
+      });
+    });
+
     document.getElementById("detalhe-bloco-status").outerHTML =
       statusBadge(b.status).replace('<span class="badge', '<span id="detalhe-bloco-status" class="badge');
 
@@ -271,6 +306,74 @@
 
     document.getElementById("modal-bloco").classList.add("active");
   }
+
+  /* ============================================================
+     PRECISA COMPRAR — marcar item como faltando + itens avulsos
+  ============================================================ */
+
+  /** Marca/desmarca "falta" num item do bloco e sincroniza com a
+      coleção "compras", que alimenta a aba "Precisa comprar" e o
+      painel de compras do admin. */
+  function toggleFalta(block, idx, falta) {
+    var item = block.items[idx];
+    item.falta = falta;
+
+    if (falta) {
+      db.collection("compras").add({
+        itemName: item.itemName,
+        quantity: item.quantity,
+        blockId: block.id,
+        blockName: block.name,
+        requestedBy: currentUid,
+        requestedByName: document.getElementById("user-name").textContent,
+        status: "pendente",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function (ref) {
+        item.compraId = ref.id;
+        db.collection("blocks").doc(block.id).update({ items: block.items });
+      });
+    } else if (item.compraId) {
+      db.collection("compras").doc(item.compraId).delete();
+      delete item.compraId;
+      db.collection("blocks").doc(block.id).update({ items: block.items });
+    } else {
+      db.collection("blocks").doc(block.id).update({ items: block.items });
+    }
+  }
+
+  function renderComprar() {
+    var container = document.getElementById("lista-comprar");
+    container.innerHTML = comprasCache.length ? comprasCache.map(function (c) {
+      return '<div class="list-row">' +
+        '<div class="row-main">' +
+        '<div class="row-title">' + c.itemName + '</div>' +
+        '<div class="row-sub">' + c.quantity + ' un. · ' + (c.blockName || "Item avulso") + '</div>' +
+        '</div>' +
+        '<div class="row-side">' + (COMPRA_STATUS_LABEL[c.status] || c.status) + '</div>' +
+        '</div>';
+    }).join("") : '<div class="empty-state"><h3>Nenhum item pendente</h3><p>Itens marcados como "Falta" aparecerão aqui.</p></div>';
+  }
+
+  document.getElementById("btn-add-comprar").addEventListener("click", function () {
+    var nome = document.getElementById("comprar-nome").value.trim();
+    var qtd = Math.max(1, parseInt(document.getElementById("comprar-qtd").value, 10) || 1);
+    if (!nome) { toast("Digite o nome do item."); return; }
+
+    db.collection("compras").add({
+      itemName: nome,
+      quantity: qtd,
+      blockId: null,
+      blockName: null,
+      requestedBy: currentUid,
+      requestedByName: document.getElementById("user-name").textContent,
+      status: "pendente",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function () {
+      document.getElementById("comprar-nome").value = "";
+      document.getElementById("comprar-qtd").value = "1";
+      toast("Item adicionado à lista de compras.");
+    });
+  });
 
   document.getElementById("btn-fechar-detalhe").addEventListener("click", function () {
     document.getElementById("modal-bloco").classList.remove("active");

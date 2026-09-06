@@ -38,6 +38,7 @@
     <nav class="nav-group">
       <div class="nav-item active" data-view="blocos"><span class="dot"></span>Blocos</div>
       <div class="nav-item" data-view="historico"><span class="dot"></span>Histórico</div>
+      <div class="nav-item" data-view="comprar"><span class="dot"></span>Precisa comprar</div>
     </nav>
 
     <div class="sidebar-footer">
@@ -72,6 +73,32 @@
         </div>
       </div>
       <div class="list" id="lista-historico"></div>
+    </section>
+
+    <section class="view" id="view-comprar">
+      <div class="page-head">
+        <div>
+          <h1>Precisa comprar</h1>
+          <p class="subtitle">Itens marcados como faltando, de todos os blocos.</p>
+        </div>
+      </div>
+
+      <div class="panel mb-3">
+        <h3 class="mb-2">Adicionar item avulso</h3>
+        <div class="field-grid">
+          <div class="field-row">
+            <label for="comprar-nome">Nome do item</label>
+            <input type="text" id="comprar-nome" placeholder="Ex: Parafuso 3mm">
+          </div>
+          <div class="field-row">
+            <label for="comprar-qtd">Quantidade</label>
+            <input type="number" id="comprar-qtd" min="1" value="1">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-add-comprar">Adicionar à lista</button>
+      </div>
+
+      <div class="list" id="lista-comprar"></div>
     </section>
 
   </main>
