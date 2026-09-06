@@ -172,11 +172,7 @@ label{
   min-height:100vh;
 }
 
-<<<<<<< HEAD
 /* barra fixa no topo, sempre visível — nome do app + botão de menu + tema */
-=======
-/* barra fixa no topo, sempre visível — nome do app + botão de menu */
->>>>>>> 674e1d9ef59c0ddb985a6fb321baf60bda5181fc
 .topbar{
   position:sticky;
   top:0;
@@ -189,11 +185,7 @@ label{
   background:var(--surface);
   border-bottom:1px solid var(--border);
 }
-<<<<<<< HEAD
 .menu-btn, .theme-btn{
-=======
-.menu-btn{
->>>>>>> 674e1d9ef59c0ddb985a6fb321baf60bda5181fc
   display:flex;
   align-items:center;
   justify-content:center;
@@ -202,7 +194,6 @@ label{
   flex-shrink:0;
   color:var(--ink);
 }
-<<<<<<< HEAD
 .menu-btn:hover, .theme-btn:hover{ background:var(--surface-sunken); }
 .menu-btn svg, .theme-btn svg{ width:20px; height:20px; }
 
@@ -211,19 +202,11 @@ label{
 .theme-btn .icon-sun{ display:none; }
 html[data-theme="dark"] .theme-btn .icon-moon{ display:none; }
 html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
-=======
-.menu-btn:hover{ background:var(--surface-sunken); }
-.menu-btn svg{ width:20px; height:20px; }
->>>>>>> 674e1d9ef59c0ddb985a6fb321baf60bda5181fc
 
 /* fundo escurecido atrás da gaveta, some quando fechada */
 .nav-backdrop{
   position:fixed; inset:0;
-<<<<<<< HEAD
   background:rgba(0,0,0,0.55);
-=======
-  background:rgba(20,23,31,0.45);
->>>>>>> 674e1d9ef59c0ddb985a6fb321baf60bda5181fc
   z-index:49;
   opacity:0;
   pointer-events:none;
@@ -245,10 +228,7 @@ html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
   z-index:50;
   transform:translateX(-100%);
   transition:transform .22s ease;
-<<<<<<< HEAD
   overflow-y:auto;
-=======
->>>>>>> 674e1d9ef59c0ddb985a6fb321baf60bda5181fc
 }
 .sidebar.open{ transform:translateX(0); }
 
@@ -532,8 +512,4 @@ html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
 @media (min-width: 600px){
   .main{ max-width:520px; margin:0 auto; }
   .topbar{ padding:0 max(14px, calc((100% - 520px) / 2)); }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 674e1d9ef59c0ddb985a6fb321baf60bda5181fc
