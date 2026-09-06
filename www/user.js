@@ -1,466 +1,527 @@
 /* ============================================================
-   BABA LINDAO DEUS — USUÁRIO
-   Arquivo único: config + inicialização + lógica.
-   Usa o SDK clássico do Firebase (compat), carregado via <script>
-   no HTML, por exemplo:
-
-     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-     <script src="user.js"></script>
-
-   Nenhum import/export — tudo dentro de uma IIFE.
+   BABA LINDAO DEUS — Design System
    ============================================================ */
-(function () {
 
-  /* ---------------------------------------------------------
-     CONFIGURAÇÃO DO FIREBASE
-     Preencha com os dados do seu projeto (Configurações do
-     projeto → Seus apps → app da Web).
-  --------------------------------------------------------- */
-  var firebaseConfig = {
-    apiKey: "AIzaSyAa5yO2HSOGyUOCqKXKUEEsqGPKHOv78Es",
-  authDomain: "babalindo-feb02.firebaseapp.com",
-  projectId: "babalindo-feb02",
-  storageBucket: "babalindo-feb02.firebasestorage.app",
-  messagingSenderId: "620496011247",
-  appId: "1:620496011247:web:6095a42681b7b56fbb801a",
-  measurementId: "G-VM4XKBE0KF"
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
 
-  };
+:root{
+  /* cor — tema claro (padrão) */
+  --bg:            #F5F6F8;
+  --surface:       #FFFFFF;
+  --surface-sunken:#EEF0F3;
+  --ink:           #14171F;
+  --ink-muted:     #5B6172;
+  --ink-faint:     #9098AA;
+  --border:        #E1E4EA;
+  --border-strong: #C7CBD6;
 
-  firebase.initializeApp(firebaseConfig);
-  var auth = firebase.auth();
-  var db   = firebase.firestore();
+  --accent:        #375DFB;
+  --accent-hover:  #2C4CE0;
+  --accent-soft:   #EAF0FF;
 
-  // No navegador (GitHub Pages), os dois sites (admin e usuário) ficam no
-  // mesmo domínio e compartilham o localStorage — por isso usamos SESSION
-  // aqui, pra logar em um não derrubar o outro. Já dentro do app instalado
-  // (Capacitor), cada site roda isolado no seu próprio app, então não tem
-  // esse conflito — nesse caso usamos LOCAL pra manter a pessoa logada
-  // entre uma abertura e outra do app, sem precisar digitar a senha toda vez.
-  var isAppNativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  auth.setPersistence(isAppNativo ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
+  --status-pending:   #E2A33D;
+  --status-pending-bg:#FBF0DC;
+  --status-accepted:  #375DFB;
+  --status-accepted-bg:#EAF0FF;
+  --status-progress:  #8A5CF6;
+  --status-progress-bg:#F1EBFE;
+  --status-done:      #1F9D6E;
+  --status-done-bg:   #E4F5EE;
+  --danger:        #E5484D;
+  --danger-bg:     #FCE7E7;
 
-  var STATUS = {
-    PENDENTE:   "pendente",
-    ACEITO:     "aceito",
-    ANDAMENTO:  "andamento",
-    FINALIZADO: "finalizado"
-  };
+  /* tipografia */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body:    'Inter', sans-serif;
 
-  var STATUS_LABEL = {
-    pendente:   "Pendente",
-    aceito:     "Aceito",
-    andamento:  "Em andamento",
-    finalizado: "Finalizado"
-  };
+  /* layout */
+  --sidebar-w: 236px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --shadow-pop: 0 8px 24px rgba(20,23,31,0.12);
+}
 
-  var COMPRA_STATUS_LABEL = {
-    pendente:  "Aguardando aprovação",
-    aprovado:  "Aprovado para compra",
-    rejeitado: "Não será comprado",
-    comprado:  "Comprado"
-  };
+/* ---------- tema escuro ---------- */
+html[data-theme="dark"]{
+  --bg:            #101319;
+  --surface:       #171B24;
+  --surface-sunken:#1D222D;
+  --ink:           #EDEFF4;
+  --ink-muted:     #9198AC;
+  --ink-faint:     #666E82;
+  --border:        #262B37;
+  --border-strong: #343B4A;
 
-  var blocksCache = [];
-  var comprasCache = [];
-  var currentBlockId = null;
-  var currentUid = null;
+  --accent:        #5B7FFF;
+  --accent-hover:  #7391FF;
+  --accent-soft:   #1B2540;
 
-  /* ============================================================
-     LOGIN / GUARD DE AUTENTICAÇÃO
-  ============================================================ */
-  var authShell    = document.getElementById("auth-shell");
-  var appShell     = document.getElementById("app-shell");
-  var authError    = document.getElementById("auth-error");
-  var loginForm    = document.getElementById("login-form");
-  var loginBtn     = document.getElementById("login-btn");
-  var unsubscribeBlocks = null;
-  var unsubscribeCompras = []; // duas assinaturas: pedidos feitos por mim + pedidos que o admin lançou nas minhas listas
-  var comprasMineCache = [];
-  var comprasBlocoCache = [];
+  --status-pending:   #E7B255;
+  --status-pending-bg:#332711;
+  --status-accepted:  #6E8CFF;
+  --status-accepted-bg:#182449;
+  --status-progress:  #A587F9;
+  --status-progress-bg:#241A3D;
+  --status-done:      #3FC290;
+  --status-done-bg:   #0F3327;
+  --danger:        #F0666A;
+  --danger-bg:     #3A1519;
 
-  function showLogin(message) {
-    if (unsubscribeBlocks) { unsubscribeBlocks(); unsubscribeBlocks = null; }
-    unsubscribeCompras.forEach(function (fn) { fn(); });
-    unsubscribeCompras = [];
-    appShell.classList.add("hidden");
-    authShell.classList.remove("hidden");
-    if (message) {
-      authError.textContent = message;
-      authError.classList.add("show");
-    } else {
-      authError.textContent = "";
-      authError.classList.remove("show");
-    }
-  }
+  --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+}
 
-  function showApp() {
-    authShell.classList.add("hidden");
-    appShell.classList.remove("hidden");
-  }
+*{ box-sizing: border-box; }
 
-  function loginErrorMessage(err) {
-    switch (err && err.code) {
-      case "auth/invalid-email":       return "E-mail inválido.";
-      case "auth/user-disabled":       return "Esta conta foi desativada.";
-      case "auth/user-not-found":
-      case "auth/wrong-password":
-      case "auth/invalid-credential":  return "E-mail ou senha incorretos.";
-      case "auth/too-many-requests":   return "Muitas tentativas. Tente novamente mais tarde.";
-      case "auth/network-request-failed": return "Falha de conexão. Verifique sua internet.";
-      default:                          return "Não foi possível entrar. Tente novamente.";
-    }
-  }
+html,body{
+  margin:0;
+  padding:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family: var(--font-body);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
 
-  loginForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    var email = document.getElementById("login-email").value.trim();
-    var password = document.getElementById("login-password").value;
-    if (!email || !password) return;
+body, .topbar, .sidebar, .panel, .list, .metric, .modal, .auth-card,
+.item-line, .list-row, input, textarea, select, .toast, .badge{
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
 
-    loginBtn.disabled = true;
-    loginBtn.textContent = "Entrando...";
-    authError.classList.remove("show");
+h1,h2,h3,h4{
+  font-family: var(--font-display);
+  font-weight:600;
+  margin:0;
+  color:var(--ink);
+  letter-spacing:-0.01em;
+}
+h1{ font-size:26px; }
+h2{ font-size:19px; }
+h3{ font-size:15px; }
 
-    auth.signInWithEmailAndPassword(email, password)
-      .catch(function (err) {
-        showLogin(loginErrorMessage(err));
-      })
-      .finally(function () {
-        loginBtn.disabled = false;
-        loginBtn.textContent = "Entrar";
-      });
-  });
+p{ margin:0; }
 
-  auth.onAuthStateChanged(function (user) {
-    if (!user) { currentUid = null; showLogin(); return; }
+a{ color:inherit; text-decoration:none; }
 
-    db.collection("users").doc(user.uid).get().then(function (snap) {
-      var profile = snap.exists ? Object.assign({ id: snap.id }, snap.data()) : null;
+button{
+  font-family:var(--font-body);
+  font-size:14px;
+  cursor:pointer;
+  border:none;
+  background:none;
+  color:inherit;
+}
 
-      if (!profile || profile.role !== "user") {
-        auth.signOut();
-        showLogin("Esta conta não tem permissão de usuário.");
-        return;
-      }
+input, textarea, select{
+  font-family:var(--font-body);
+  font-size:14px;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:9px 11px;
+  width:100%;
+  outline:none;
+  transition:border-color .15s ease;
+}
+input:focus, textarea:focus, select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+textarea{ resize:vertical; min-height:64px; }
 
-      currentUid = user.uid;
-      document.getElementById("user-name").textContent = profile.name || user.email;
-      document.getElementById("user-initial").textContent = (profile.name || user.email).charAt(0).toUpperCase();
+label{
+  display:block;
+  font-size:12.5px;
+  font-weight:500;
+  color:var(--ink-muted);
+  margin-bottom:6px;
+}
 
-      showApp();
+:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
 
-      if (unsubscribeBlocks) unsubscribeBlocks();
-      unsubscribeBlocks = db.collection("blocks")
-        .where("assignedTo", "==", user.uid)
-        .orderBy("createdAt", "desc")
-        .onSnapshot(function (snap2) {
-          var blocks = [];
-          snap2.forEach(function (d) { blocks.push(Object.assign({ id: d.id }, d.data())); });
-          blocksCache = blocks;
-          renderBlocos();
-          renderHistorico();
-        });
+/* ---------- botões ---------- */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:9px 16px;
+  border-radius:var(--radius-sm);
+  font-weight:500;
+  font-size:14px;
+  transition:background .15s ease, transform .05s ease;
+  white-space:nowrap;
+}
+.btn:active{ transform:translateY(1px); }
+.btn-primary{ background:var(--accent); color:#fff; }
+.btn-primary:hover{ background:var(--accent-hover); }
+.btn-secondary{ background:var(--surface-sunken); color:var(--ink); }
+.btn-secondary:hover{ background:var(--border); }
+.btn-ghost{ color:var(--ink-muted); padding:8px 10px; }
+.btn-ghost:hover{ color:var(--ink); background:var(--surface-sunken); }
+.btn-danger{ background:var(--danger-bg); color:var(--danger); }
+.btn-danger:hover{ filter:brightness(0.92); }
+.btn-block{ width:100%; justify-content:center; }
+.btn:disabled{ opacity:.5; cursor:not-allowed; }
 
-      if (unsubscribeCompras.length) { unsubscribeCompras.forEach(function (fn) { fn(); }); unsubscribeCompras = []; }
+/* ---------- layout de app: barra superior + gaveta lateral ---------- */
+.app-shell{
+  min-height:100vh;
+}
 
-      function mergeComprasCaches() {
-        var map = {};
-        comprasMineCache.concat(comprasBlocoCache).forEach(function (c) { map[c.id] = c; });
-        comprasCache = Object.keys(map).map(function (k) { return map[k]; });
-        comprasCache.sort(function (a, b) {
-          var ta = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : 0;
-          var tb = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : 0;
-          return tb - ta;
-        });
-        renderComprar();
-      }
+/* barra fixa no topo, sempre visível — nome do app + botão de menu + tema */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:40;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  height:56px;
+  padding:0 14px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.menu-btn, .theme-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:36px; height:36px;
+  border-radius:var(--radius-sm);
+  flex-shrink:0;
+  color:var(--ink);
+}
+.menu-btn:hover, .theme-btn:hover{ background:var(--surface-sunken); }
+.menu-btn svg, .theme-btn svg{ width:20px; height:20px; }
 
-      unsubscribeCompras.push(db.collection("compras")
-        .where("requestedBy", "==", user.uid)
-        .onSnapshot(function (snap3) {
-          var compras = [];
-          snap3.forEach(function (d) { compras.push(Object.assign({ id: d.id }, d.data())); });
-          comprasMineCache = compras;
-          mergeComprasCaches();
-        }));
+.theme-btn{ margin-left:auto; }
+.theme-btn .icon-moon{ display:block; }
+.theme-btn .icon-sun{ display:none; }
+html[data-theme="dark"] .theme-btn .icon-moon{ display:none; }
+html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
 
-      unsubscribeCompras.push(db.collection("compras")
-        .where("assignedTo", "==", user.uid)
-        .onSnapshot(function (snap4) {
-          var compras = [];
-          snap4.forEach(function (d) { compras.push(Object.assign({ id: d.id }, d.data())); });
-          comprasBlocoCache = compras;
-          mergeComprasCaches();
-        }));
-    }).catch(function () {
-      auth.signOut();
-      showLogin("Erro ao verificar sua conta. Tente novamente.");
-    });
-  });
+/* fundo escurecido atrás da gaveta, some quando fechada */
+.nav-backdrop{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.55);
+  z-index:49;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.nav-backdrop.open{ opacity:1; pointer-events:auto; }
 
-  document.getElementById("logout-btn").addEventListener("click", function () {
-    auth.signOut();
-  });
+/* gaveta lateral: fora da tela por padrão, desliza ao abrir */
+.sidebar{
+  width:var(--sidebar-w);
+  flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  position:fixed;
+  top:0; bottom:0; left:0;
+  padding:22px 14px;
+  z-index:50;
+  transform:translateX(-100%);
+  transition:transform .22s ease;
+  overflow-y:auto;
+}
+.sidebar.open{ transform:translateX(0); }
 
-  /* ============================================================
-     RECARREGAR + AVISO DE CONEXÃO
-     (mesma lógica do admin.js — ver comentário lá)
-  ============================================================ */
-  document.getElementById("reload-btn").addEventListener("click", function () {
-    location.reload();
-  });
+.brand{
+  font-family:var(--font-display);
+  font-size:16px;
+  font-weight:700;
+  padding:0 10px 22px 10px;
+  color:var(--ink);
+  line-height:1.25;
+}
+.brand span{ color:var(--accent); }
 
-  function updateOfflineBadge() {
-    document.getElementById("offline-badge").classList.toggle("hidden", navigator.onLine);
-  }
-  window.addEventListener("online", updateOfflineBadge);
-  window.addEventListener("offline", updateOfflineBadge);
-  updateOfflineBadge();
+.nav-group{ margin-bottom:4px; }
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 10px;
+  border-radius:var(--radius-sm);
+  color:var(--ink-muted);
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  margin-bottom:2px;
+}
+.nav-item:hover{ background:var(--surface-sunken); color:var(--ink); }
+.nav-item.active{ background:var(--accent-soft); color:var(--accent); }
+.nav-item .dot{
+  width:6px; height:6px; border-radius:50%;
+  background:currentColor; opacity:.55; flex-shrink:0;
+}
 
-  /* ============================================================
-     NAVEGAÇÃO + GAVETA LATERAL
-  ============================================================ */
-  var menuBtn     = document.getElementById("menu-btn");
-  var sidebarEl   = document.getElementById("sidebar");
-  var navBackdrop = document.getElementById("nav-backdrop");
+.sidebar-footer{
+  margin-top:auto;
+  border-top:1px solid var(--border);
+  padding-top:14px;
+}
+.user-chip{
+  display:flex; align-items:center; gap:10px;
+  padding:6px 10px;
+}
+.user-avatar{
+  width:30px; height:30px; border-radius:50%;
+  background:var(--accent-soft); color:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:600; font-size:13px; font-family:var(--font-display);
+  flex-shrink:0;
+}
+.user-meta{ min-width:0; }
+.user-name{ font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-role{ font-size:12px; color:var(--ink-faint); }
 
-  function openNav() {
-    sidebarEl.classList.add("open");
-    navBackdrop.classList.add("open");
-    menuBtn.setAttribute("aria-expanded", "true");
-  }
-  function closeNav() {
-    sidebarEl.classList.remove("open");
-    navBackdrop.classList.remove("open");
-    menuBtn.setAttribute("aria-expanded", "false");
-  }
-  menuBtn.addEventListener("click", function () {
-    if (sidebarEl.classList.contains("open")) { closeNav(); } else { openNav(); }
-  });
-  navBackdrop.addEventListener("click", closeNav);
+.main{
+  padding:20px 16px 50px 16px;
+}
 
-  function switchView(name) {
-    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
-    document.querySelectorAll(".nav-item").forEach(function (n) { n.classList.remove("active"); });
-    document.getElementById("view-" + name).classList.add("active");
-    document.querySelector('.nav-item[data-view="' + name + '"]').classList.add("active");
-  }
-  document.querySelectorAll(".nav-item[data-view]").forEach(function (el) {
-    el.addEventListener("click", function () { switchView(el.dataset.view); closeNav(); });
-  });
+.page-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin-bottom:26px;
+  gap:16px;
+}
+.page-head p.subtitle{
+  color:var(--ink-muted);
+  font-size:14px;
+  margin-top:5px;
+}
 
-  /* ============================================================
-     TOAST
-  ============================================================ */
-  var toastTimer;
-  function toast(msg) {
-    var el = document.getElementById("toast");
-    el.textContent = msg;
-    el.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2600);
-  }
+.view{ display:none; }
+.view.active{ display:block; }
 
-  /* ============================================================
-     HELPERS
-  ============================================================ */
-  function statusBadge(status) {
-    return '<span class="badge ' + status + '">' + (STATUS_LABEL[status] || status) + '</span>';
-  }
-  function fmtDate(ts) {
-    if (!ts || !ts.toDate) return "";
-    return ts.toDate().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  }
+/* ---------- cartões de métrica (dashboard) ---------- */
+.metric-row{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:10px;
+  margin-bottom:24px;
+}
+.metric{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:16px 18px;
+}
+.metric .value{
+  font-family:var(--font-display);
+  font-size:28px;
+  font-weight:700;
+}
+.metric .label{
+  font-size:12.5px;
+  color:var(--ink-muted);
+  margin-top:2px;
+}
 
-  /** Agrupa uma lista de itens (com modelId/modelName) por comida de origem,
-      mantendo o índice original em b.items (necessário pra marcar "falta").
-      Itens sem modelId (avulsos) caem em "Itens avulsos". */
-  function groupItemsByModel(items) {
-    var groups = {};
-    var order = [];
-    items.forEach(function (it, idx) {
-      var key = it.modelId || "_avulso";
-      if (!groups[key]) {
-        groups[key] = { name: it.modelName || "Itens avulsos", items: [] };
-        order.push(key);
-      }
-      groups[key].items.push(Object.assign({ idx: idx }, it));
-    });
-    return order.map(function (k) { return groups[k]; });
-  }
+/* ---------- listas (itens / modelos / blocos) ---------- */
+.list{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  overflow:hidden;
+}
+.list-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 18px;
+  border-left:3px solid transparent;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+.list-row:last-child{ border-bottom:none; }
+.list-row:hover{ background:var(--surface-sunken); }
+.list-row .row-main{ flex:1; min-width:0; }
+.list-row .row-title{ font-weight:600; font-size:14.5px; }
+.list-row .row-sub{ font-size:13px; color:var(--ink-muted); margin-top:2px; }
+.list-row .row-side{ text-align:right; flex-shrink:0; font-size:13px; color:var(--ink-muted); }
 
-  /** Próximo status e o rótulo do botão de ação para avançar o fluxo. */
-  function nextStep(status) {
-    switch (status) {
-      case STATUS.PENDENTE:  return { next: STATUS.ACEITO,     label: "Aceitar" };
-      case STATUS.ACEITO:    return { next: STATUS.ANDAMENTO,  label: "Iniciar produção" };
-      case STATUS.ANDAMENTO: return { next: STATUS.FINALIZADO, label: "Finalizar" };
-      default:                return null;
-    }
-  }
+.empty-state{
+  padding:48px 20px;
+  text-align:center;
+  color:var(--ink-muted);
+}
+.empty-state h3{ color:var(--ink); margin-bottom:6px; }
+.empty-state p{ font-size:13.5px; margin-bottom:16px; }
 
-  /* ============================================================
-     RENDER — BLOCOS
-  ============================================================ */
-  function renderBlockRow(b) {
-    return '' +
-      '<div class="list-row ' + b.status + '" data-id="' + b.id + '">' +
-      '<div class="row-main">' +
-      '<div class="row-title">' + b.name + '</div>' +
-      '<div class="row-sub">' + b.items.length + ' ' + (b.items.length === 1 ? "item" : "itens") + ' · ' + fmtDate(b.createdAt) + '</div>' +
-      '</div>' +
-      '<div class="row-side">' + statusBadge(b.status) + '</div>' +
-      '</div>';
-  }
+/* ---------- badges de status ---------- */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 10px;
+  border-radius:100px;
+  font-size:12px;
+  font-weight:600;
+}
+.badge::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.badge.pendente{ background:var(--status-pending-bg); color:var(--status-pending); }
+.badge.aceito{ background:var(--status-accepted-bg); color:var(--status-accepted); }
+.badge.andamento{ background:var(--status-progress-bg); color:var(--status-progress); }
+.badge.finalizado{ background:var(--status-done-bg); color:var(--status-done); }
 
-  function renderBlocos() {
-    var ativos = blocksCache.filter(function (b) { return b.status !== STATUS.FINALIZADO; });
-    var container = document.getElementById("lista-blocos");
-    container.innerHTML = ativos.length ? ativos.map(renderBlockRow).join("")
-      : '<div class="empty-state"><h3>Nenhuma lista no momento</h3><p>Quando o administrador enviar uma tarefa, ela aparecerá aqui.</p></div>';
-    container.querySelectorAll(".list-row").forEach(function (row) {
-      row.addEventListener("click", function () { openBlockDetail(row.dataset.id); });
-    });
-  }
+.list-row.pendente{ border-left-color:var(--status-pending); }
+.list-row.aceito{ border-left-color:var(--status-accepted); }
+.list-row.andamento{ border-left-color:var(--status-progress); }
+.list-row.finalizado{ border-left-color:var(--status-done); }
 
-  function renderHistorico() {
-    var finalizados = blocksCache.filter(function (b) { return b.status === STATUS.FINALIZADO; });
-    var container = document.getElementById("lista-historico");
-    container.innerHTML = finalizados.length ? finalizados.map(renderBlockRow).join("")
-      : '<div class="empty-state"><h3>Nenhuma lista finalizada ainda</h3></div>';
-    container.querySelectorAll(".list-row").forEach(function (row) {
-      row.addEventListener("click", function () { openBlockDetail(row.dataset.id); });
-    });
-  }
+/* ---------- formulários em painel ---------- */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:18px;
+}
+.field-row{ margin-bottom:16px; }
+.field-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+}
+.two-col{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:20px;
+  align-items:start;
+}
 
-  /* ============================================================
-     MODAL DE DETALHE + AÇÃO DE STATUS
-  ============================================================ */
-  function openBlockDetail(id) {
-    var b = blocksCache.find(function (x) { return x.id === id; });
-    if (!b) return;
-    currentBlockId = id;
+/* linha editável de item dentro de modelo/bloco */
+.item-line{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.item-line:last-child{ border-bottom:none; }
+.item-line .item-name{ flex:1; font-size:14px; font-weight:500; }
+.item-line .qty-input{ width:76px; text-align:center; }
+.item-line .remove{ color:var(--danger); font-size:13px; }
 
-    document.getElementById("detalhe-bloco-nome").textContent = b.name;
-    document.getElementById("detalhe-bloco-descricao").textContent = b.description || "Sem descrição adicional.";
+/* título de grupo (nome da comida) dentro do detalhe da lista */
+.group-title{
+  font-family:var(--font-display);
+  font-size:12px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  color:var(--ink-muted);
+  margin:16px 0 4px;
+}
+.group-title:first-child{ margin-top:0; }
 
-    document.getElementById("detalhe-bloco-itens").innerHTML = groupItemsByModel(b.items).map(function (g) {
-      return '<div class="group-title">' + g.name + '</div>' +
-        g.items.map(function (i) {
-          return '<div class="item-line">' +
-            '<span class="item-name">' + i.itemName + '</span>' +
-            '<span class="small muted">' + i.quantity + ' un.</span>' +
-            '<label class="small muted" style="display:flex;align-items:center;gap:6px;margin-left:10px;white-space:nowrap;">' +
-            '<input type="checkbox" class="falta-check" data-idx="' + i.idx + '"' + (i.falta ? " checked" : "") + '> Falta' +
-            '</label>' +
-            '</div>';
-        }).join("");
-    }).join("");
+/* ---------- modal ---------- */
+.modal-backdrop{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+  padding:20px;
+}
+.modal-backdrop.active{ display:flex; }
+.modal{
+  background:var(--surface);
+  border-radius:var(--radius-md);
+  width:100%;
+  max-width:480px;
+  max-height:86vh;
+  overflow-y:auto;
+  padding:26px;
+  box-shadow:var(--shadow-pop);
+}
+.modal-close{
+  position:absolute;
+  top:18px; right:18px;
+}
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:22px;
+}
 
-    document.getElementById("detalhe-bloco-itens").querySelectorAll(".falta-check").forEach(function (chk) {
-      chk.addEventListener("change", function () {
-        toggleFalta(b, Number(chk.dataset.idx), chk.checked);
-      });
-    });
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;
+  bottom:24px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--ink);
+  color:var(--bg);
+  padding:11px 20px;
+  border-radius:var(--radius-sm);
+  font-size:13.5px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;
+  z-index:200;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
 
-    document.getElementById("detalhe-bloco-status").outerHTML =
-      statusBadge(b.status).replace('<span class="badge', '<span id="detalhe-bloco-status" class="badge');
+/* ---------- tela de login ---------- */
+.auth-shell{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  position:relative;
+}
+.auth-card{
+  width:100%;
+  max-width:360px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:32px 28px;
+}
+.auth-brand{
+  font-family:var(--font-display);
+  font-size:19px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+.auth-brand span{ color:var(--accent); }
+.auth-sub{ color:var(--ink-muted); font-size:13.5px; margin-bottom:24px; }
+.auth-error{
+  background:var(--danger-bg); color:var(--danger);
+  font-size:13px; padding:9px 12px; border-radius:var(--radius-sm);
+  margin-bottom:14px; display:none;
+}
+.auth-error.show{ display:block; }
 
-    var actionBtn = document.getElementById("btn-avancar-status");
-    var step = nextStep(b.status);
-    if (step) {
-      actionBtn.textContent = step.label;
-      actionBtn.classList.remove("hidden");
-      actionBtn.onclick = function () {
-        db.collection("blocks").doc(b.id).update({
-          status: step.next,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(function () {
-          toast('lista marcada como "' + STATUS_LABEL[step.next] + '".');
-          document.getElementById("modal-bloco").classList.remove("active");
-        });
-      };
-    } else {
-      actionBtn.classList.add("hidden");
-    }
+/* botão de tema também disponível na tela de login */
+.auth-theme-btn{
+  position:absolute;
+  top:16px; right:16px;
+}
 
-    document.getElementById("modal-bloco").classList.add("active");
-  }
+/* ---------- utilitários ---------- */
+.mb-1{ margin-bottom:8px; } .mb-2{ margin-bottom:16px; } .mb-3{ margin-bottom:24px; }
+.flex{ display:flex; align-items:center; }
+.flex-between{ display:flex; align-items:center; justify-content:space-between; }
+.gap-2{ gap:10px; }
+.muted{ color:var(--ink-muted); }
+.small{ font-size:13px; }
+.hidden{ display:none !important; }
 
-  /* ============================================================
-     PRECISA COMPRAR — marcar item como faltando + itens avulsos
-  ============================================================ */
-
-  /** Marca/desmarca "falta" num item do bloco e sincroniza com a
-      coleção "compras", que alimenta a aba "Precisa comprar" e o
-      painel de compras do admin. */
-  function toggleFalta(block, idx, falta) {
-    var item = block.items[idx];
-    item.falta = falta;
-
-    if (falta) {
-      db.collection("compras").add({
-        itemName: item.itemName,
-        quantity: item.quantity,
-        blockId: block.id,
-        blockName: block.name,
-        requestedBy: currentUid,
-        requestedByName: document.getElementById("user-name").textContent,
-        status: "pendente",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function (ref) {
-        item.compraId = ref.id;
-        db.collection("blocks").doc(block.id).update({ items: block.items });
-      });
-    } else if (item.compraId) {
-      db.collection("compras").doc(item.compraId).delete();
-      delete item.compraId;
-      db.collection("blocks").doc(block.id).update({ items: block.items });
-    } else {
-      db.collection("blocks").doc(block.id).update({ items: block.items });
-    }
-  }
-
-  function renderComprar() {
-    var container = document.getElementById("lista-comprar");
-    container.innerHTML = comprasCache.length ? comprasCache.map(function (c) {
-      return '<div class="list-row">' +
-        '<div class="row-main">' +
-        '<div class="row-title">' + c.itemName + '</div>' +
-        '<div class="row-sub">' + c.quantity + ' un. · ' + (c.blockName || "Item avulso") + '</div>' +
-        (c.adminNote ? '<div class="row-sub">💡 ' + c.adminNote + '</div>' : '') +
-        '</div>' +
-        '<div class="row-side">' + (COMPRA_STATUS_LABEL[c.status] || c.status) + '</div>' +
-        '</div>';
-    }).join("") : '<div class="empty-state"><h3>Nenhum item pendente</h3><p>Itens marcados como "Falta" aparecerão aqui.</p></div>';
-  }
-
-  document.getElementById("btn-add-comprar").addEventListener("click", function () {
-    var nome = document.getElementById("comprar-nome").value.trim();
-    var qtd = Math.max(1, parseInt(document.getElementById("comprar-qtd").value, 10) || 1);
-    if (!nome) { toast("Digite o nome do item."); return; }
-
-    db.collection("compras").add({
-      itemName: nome,
-      quantity: qtd,
-      blockId: null,
-      blockName: null,
-      requestedBy: currentUid,
-      requestedByName: document.getElementById("user-name").textContent,
-      status: "pendente",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function () {
-      document.getElementById("comprar-nome").value = "";
-      document.getElementById("comprar-qtd").value = "1";
-      toast("Item adicionado à lista de compras.");
-    });
-  });
-
-  document.getElementById("btn-fechar-detalhe").addEventListener("click", function () {
-    document.getElementById("modal-bloco").classList.remove("active");
-  });
-
-})();
+/* ---------- teto de largura para telas maiores (tablet/desktop acessando por engano) ---------- */
+@media (min-width: 600px){
+  .main{ max-width:520px; margin:0 auto; }
+  .topbar{ padding:0 max(14px, calc((100% - 520px) / 2)); }
+}
