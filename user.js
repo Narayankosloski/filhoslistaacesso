@@ -33,9 +33,14 @@
   var auth = firebase.auth();
   var db   = firebase.firestore();
 
-  // Sessão isolada por aba: evita que o site do admin (mesmo domínio
-  // no GitHub Pages) derrube o login deste site do usuário, e vice-versa.
-  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+  // No navegador (GitHub Pages), os dois sites (admin e usuário) ficam no
+  // mesmo domínio e compartilham o localStorage — por isso usamos SESSION
+  // aqui, pra logar em um não derrubar o outro. Já dentro do app instalado
+  // (Capacitor), cada site roda isolado no seu próprio app, então não tem
+  // esse conflito — nesse caso usamos LOCAL pra manter a pessoa logada
+  // entre uma abertura e outra do app, sem precisar digitar a senha toda vez.
+  var isAppNativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  auth.setPersistence(isAppNativo ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION);
 
   var STATUS = {
     PENDENTE:   "pendente",
@@ -72,11 +77,14 @@
   var loginForm    = document.getElementById("login-form");
   var loginBtn     = document.getElementById("login-btn");
   var unsubscribeBlocks = null;
-  var unsubscribeCompras = null;
+  var unsubscribeCompras = []; // duas assinaturas: pedidos feitos por mim + pedidos que o admin lançou nas minhas listas
+  var comprasMineCache = [];
+  var comprasBlocoCache = [];
 
   function showLogin(message) {
     if (unsubscribeBlocks) { unsubscribeBlocks(); unsubscribeBlocks = null; }
-    if (unsubscribeCompras) { unsubscribeCompras(); unsubscribeCompras = null; }
+    unsubscribeCompras.forEach(function (fn) { fn(); });
+    unsubscribeCompras = [];
     appShell.classList.add("hidden");
     authShell.classList.remove("hidden");
     if (message) {
@@ -156,16 +164,37 @@
           renderHistorico();
         });
 
-      if (unsubscribeCompras) unsubscribeCompras();
-      unsubscribeCompras = db.collection("compras")
+      if (unsubscribeCompras.length) { unsubscribeCompras.forEach(function (fn) { fn(); }); unsubscribeCompras = []; }
+
+      function mergeComprasCaches() {
+        var map = {};
+        comprasMineCache.concat(comprasBlocoCache).forEach(function (c) { map[c.id] = c; });
+        comprasCache = Object.keys(map).map(function (k) { return map[k]; });
+        comprasCache.sort(function (a, b) {
+          var ta = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : 0;
+          var tb = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : 0;
+          return tb - ta;
+        });
+        renderComprar();
+      }
+
+      unsubscribeCompras.push(db.collection("compras")
         .where("requestedBy", "==", user.uid)
-        .orderBy("createdAt", "desc")
         .onSnapshot(function (snap3) {
           var compras = [];
           snap3.forEach(function (d) { compras.push(Object.assign({ id: d.id }, d.data())); });
-          comprasCache = compras;
-          renderComprar();
-        });
+          comprasMineCache = compras;
+          mergeComprasCaches();
+        }));
+
+      unsubscribeCompras.push(db.collection("compras")
+        .where("assignedTo", "==", user.uid)
+        .onSnapshot(function (snap4) {
+          var compras = [];
+          snap4.forEach(function (d) { compras.push(Object.assign({ id: d.id }, d.data())); });
+          comprasBlocoCache = compras;
+          mergeComprasCaches();
+        }));
     }).catch(function () {
       auth.signOut();
       showLogin("Erro ao verificar sua conta. Tente novamente.");
@@ -231,6 +260,23 @@
     return ts.toDate().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
   }
 
+  /** Agrupa uma lista de itens (com modelId/modelName) por comida de origem,
+      mantendo o índice original em b.items (necessário pra marcar "falta").
+      Itens sem modelId (avulsos) caem em "Itens avulsos". */
+  function groupItemsByModel(items) {
+    var groups = {};
+    var order = [];
+    items.forEach(function (it, idx) {
+      var key = it.modelId || "_avulso";
+      if (!groups[key]) {
+        groups[key] = { name: it.modelName || "Itens avulsos", items: [] };
+        order.push(key);
+      }
+      groups[key].items.push(Object.assign({ idx: idx }, it));
+    });
+    return order.map(function (k) { return groups[k]; });
+  }
+
   /** Próximo status e o rótulo do botão de ação para avançar o fluxo. */
   function nextStep(status) {
     switch (status) {
@@ -286,14 +332,17 @@
     document.getElementById("detalhe-bloco-nome").textContent = b.name;
     document.getElementById("detalhe-bloco-descricao").textContent = b.description || "Sem descrição adicional.";
 
-    document.getElementById("detalhe-bloco-itens").innerHTML = b.items.map(function (i, idx) {
-      return '<div class="item-line">' +
-        '<span class="item-name">' + i.itemName + '</span>' +
-        '<span class="small muted">' + i.quantity + ' un.</span>' +
-        '<label class="small muted" style="display:flex;align-items:center;gap:6px;margin-left:10px;white-space:nowrap;">' +
-        '<input type="checkbox" class="falta-check" data-idx="' + idx + '"' + (i.falta ? " checked" : "") + '> Falta' +
-        '</label>' +
-        '</div>';
+    document.getElementById("detalhe-bloco-itens").innerHTML = groupItemsByModel(b.items).map(function (g) {
+      return '<div class="group-title">' + g.name + '</div>' +
+        g.items.map(function (i) {
+          return '<div class="item-line">' +
+            '<span class="item-name">' + i.itemName + '</span>' +
+            '<span class="small muted">' + i.quantity + ' un.</span>' +
+            '<label class="small muted" style="display:flex;align-items:center;gap:6px;margin-left:10px;white-space:nowrap;">' +
+            '<input type="checkbox" class="falta-check" data-idx="' + i.idx + '"' + (i.falta ? " checked" : "") + '> Falta' +
+            '</label>' +
+            '</div>';
+        }).join("");
     }).join("");
 
     document.getElementById("detalhe-bloco-itens").querySelectorAll(".falta-check").forEach(function (chk) {
@@ -367,6 +416,7 @@
         '<div class="row-main">' +
         '<div class="row-title">' + c.itemName + '</div>' +
         '<div class="row-sub">' + c.quantity + ' un. · ' + (c.blockName || "Item avulso") + '</div>' +
+        (c.adminNote ? '<div class="row-sub">💡 ' + c.adminNote + '</div>' : '') +
         '</div>' +
         '<div class="row-side">' + (COMPRA_STATUS_LABEL[c.status] || c.status) + '</div>' +
         '</div>';
