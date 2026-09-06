@@ -26,7 +26,7 @@
 
   <div class="auth-card">
     <div class="auth-brand">Baba Lindao <span>Deus</span></div>
-    <p class="auth-sub">Entre para ver seus blocos</p>
+    <p class="auth-sub">Entre para ver suas listas</p>
 
     <div class="auth-error" id="auth-error"></div>
 
@@ -51,10 +51,17 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="brand">Baba Lindao <span>Deus</span></div>
-    <button class="theme-btn" id="theme-btn" aria-label="Alternar tema" title="Alternar tema claro/escuro">
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-    </button>
+
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+      <span class="badge offline hidden" id="offline-badge">Offline</span>
+      <button class="menu-btn" id="reload-btn" aria-label="Recarregar" title="Recarregar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button class="theme-btn" id="theme-btn" aria-label="Alternar tema" title="Alternar tema claro/escuro">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
   </header>
 
   <div class="nav-backdrop" id="nav-backdrop"></div>
@@ -63,7 +70,7 @@
     <div class="brand">Baba Lindao <span>Deus</span></div>
 
     <nav class="nav-group">
-      <div class="nav-item active" data-view="blocos"><span class="dot"></span>Blocos</div>
+      <div class="nav-item active" data-view="blocos"><span class="dot"></span>Listas</div>
       <div class="nav-item" data-view="historico"><span class="dot"></span>Histórico</div>
       <div class="nav-item" data-view="comprar"><span class="dot"></span>Precisa comprar</div>
     </nav>
@@ -85,7 +92,7 @@
     <section class="view active" id="view-blocos">
       <div class="page-head">
         <div>
-          <h1>Blocos</h1>
+          <h1>Listas</h1>
           <p class="subtitle">Tarefas enviadas para você.</p>
         </div>
       </div>
@@ -96,7 +103,7 @@
       <div class="page-head">
         <div>
           <h1>Histórico</h1>
-          <p class="subtitle">Blocos que você já finalizou.</p>
+          <p class="subtitle">Listas que você já finalizou.</p>
         </div>
       </div>
       <div class="list" id="lista-historico"></div>
@@ -106,7 +113,7 @@
       <div class="page-head">
         <div>
           <h1>Precisa comprar</h1>
-          <p class="subtitle">Itens marcados como faltando, de todos os blocos.</p>
+          <p class="subtitle">Itens marcados como faltando, de todas as listas.</p>
         </div>
       </div>
 
@@ -134,7 +141,7 @@
 <!-- ===================== MODAL: DETALHE DO BLOCO ===================== -->
 <div class="modal-backdrop" id="modal-bloco">
   <div class="modal">
-    <h2 id="detalhe-bloco-nome" class="mb-1">Bloco</h2>
+    <h2 id="detalhe-bloco-nome" class="mb-1">Lista</h2>
     <p class="small mb-3" id="detalhe-bloco-descricao"></p>
 
     <h3 class="mb-2">Itens</h3>
