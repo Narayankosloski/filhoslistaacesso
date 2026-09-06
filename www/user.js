@@ -206,6 +206,21 @@
   });
 
   /* ============================================================
+     RECARREGAR + AVISO DE CONEXÃO
+     (mesma lógica do admin.js — ver comentário lá)
+  ============================================================ */
+  document.getElementById("reload-btn").addEventListener("click", function () {
+    location.reload();
+  });
+
+  function updateOfflineBadge() {
+    document.getElementById("offline-badge").classList.toggle("hidden", navigator.onLine);
+  }
+  window.addEventListener("online", updateOfflineBadge);
+  window.addEventListener("offline", updateOfflineBadge);
+  updateOfflineBadge();
+
+  /* ============================================================
      NAVEGAÇÃO + GAVETA LATERAL
   ============================================================ */
   var menuBtn     = document.getElementById("menu-btn");
