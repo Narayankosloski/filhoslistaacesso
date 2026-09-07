@@ -326,6 +326,8 @@ html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
   color:var(--ink-muted);
   margin-top:2px;
 }
+.metric-link{ cursor:pointer; }
+.metric-link:hover{ border-color:var(--border-strong); background:var(--surface-sunken); }
 
 /* ---------- listas (itens / modelos / blocos) ---------- */
 .list{
@@ -349,6 +351,17 @@ html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
 .list-row .row-title{ font-weight:600; font-size:14.5px; }
 .list-row .row-sub{ font-size:13px; color:var(--ink-muted); margin-top:2px; }
 .list-row .row-side{ text-align:right; flex-shrink:0; font-size:13px; color:var(--ink-muted); }
+
+.warn-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  color:var(--status-pending);
+  font-size:11.5px;
+  font-weight:600;
+  margin-left:8px;
+  vertical-align:middle;
+}
 
 .empty-state{
   padding:48px 20px;
@@ -412,6 +425,46 @@ html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
 .item-line .item-name{ flex:1; font-size:14px; font-weight:500; }
 .item-line .qty-input{ width:76px; text-align:center; }
 .item-line .remove{ color:var(--danger); font-size:13px; }
+
+/* ---------- chips de categoria (filtro em Itens + tags de grupo) ---------- */
+.chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:14px;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:6px 12px;
+  border-radius:100px;
+  background:var(--surface-sunken);
+  color:var(--ink-muted);
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  border:1px solid var(--border);
+  white-space:nowrap;
+}
+.chip:hover{ background:var(--border); }
+.chip.active{ background:var(--accent-soft); color:var(--accent); border-color:var(--accent-soft); }
+.chip .chip-remove{
+  color:var(--ink-faint);
+  font-size:14px;
+  line-height:1;
+  padding:0 2px;
+}
+.chip .chip-remove:hover{ color:var(--danger); }
+.chip.active .chip-remove{ color:var(--accent); opacity:.6; }
+.chip.active .chip-remove:hover{ color:var(--danger); opacity:1; }
+
+.chip-add{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.chip-add input{ width:auto; flex:1; min-width:120px; }
 
 /* título de grupo (nome da comida) dentro do detalhe da lista */
 .group-title{
@@ -525,4 +578,59 @@ html[data-theme="dark"] .theme-btn .icon-sun{ display:block; }
 @media (min-width: 600px){
   .main{ max-width:520px; margin:0 auto; }
   .topbar{ padding:0 max(14px, calc((100% - 520px) / 2)); }
+}
+
+/* ---------- barra de navegação inferior (mobile) ---------- */
+.main{ padding-bottom:88px; }
+
+.bottom-tabbar{
+  position:fixed;
+  left:0; right:0; bottom:0;
+  z-index:45;
+  display:flex;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 600px){
+  .bottom-tabbar{ max-width:520px; margin:0 auto; }
+}
+.tab-item{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  padding:6px 4px;
+  border-radius:var(--radius-sm);
+  color:var(--ink-faint);
+  font-size:11px;
+  font-weight:500;
+}
+.tab-item svg{ width:22px; height:22px; }
+.tab-item.active{ color:var(--accent); }
+.tab-icon-wrap{ position:relative; display:inline-flex; }
+.tab-badge{
+  position:absolute;
+  top:-2px; right:-2px;
+  width:9px; height:9px;
+  border-radius:50%;
+  background:var(--danger);
+  border:2px solid var(--surface);
+}
+
+/* ---------- aviso de app desatualizado ---------- */
+.update-banner{
+  position:sticky;
+  top:56px;
+  z-index:39;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--status-pending-bg);
+  color:var(--status-pending);
+  font-size:13px;
+  font-weight:500;
+  padding:10px 14px;
 }

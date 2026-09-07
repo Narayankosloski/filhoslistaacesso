@@ -33,6 +33,9 @@
   var auth = firebase.auth();
   var db   = firebase.firestore();
 
+  var APP_VERSION = "1.0.0";
+  var currentProfile = null;
+
   // No navegador (GitHub Pages), os dois sites (admin e usuário) ficam no
   // mesmo domínio e compartilham o localStorage — por isso usamos SESSION
   // aqui, pra logar em um não derrubar o outro. Já dentro do app instalado
@@ -149,6 +152,8 @@
       currentUid = user.uid;
       document.getElementById("user-name").textContent = profile.name || user.email;
       document.getElementById("user-initial").textContent = (profile.name || user.email).charAt(0).toUpperCase();
+      currentProfile = profile;
+      renderPerfilHeader(user);
 
       showApp();
 
@@ -162,6 +167,10 @@
           blocksCache = blocks;
           renderBlocos();
           renderHistorico();
+
+          var notificar = !currentProfile || currentProfile.notifyListas !== false;
+          var temPendente = notificar && blocksCache.some(function (b) { return b.status === STATUS.PENDENTE || b.status === STATUS.ACEITO; });
+          document.getElementById("tab-badge-listas").classList.toggle("hidden", !temPendente);
         });
 
       if (unsubscribeCompras.length) { unsubscribeCompras.forEach(function (fn) { fn(); }); unsubscribeCompras = []; }
@@ -245,11 +254,68 @@
   function switchView(name) {
     document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
     document.querySelectorAll(".nav-item").forEach(function (n) { n.classList.remove("active"); });
+    document.querySelectorAll(".tab-item").forEach(function (t) { t.classList.remove("active"); });
     document.getElementById("view-" + name).classList.add("active");
-    document.querySelector('.nav-item[data-view="' + name + '"]').classList.add("active");
+    var nav = document.querySelector('.nav-item[data-view="' + name + '"]');
+    if (nav) nav.classList.add("active");
+    var tab = document.querySelector('.tab-item[data-view="' + name + '"]');
+    if (tab) tab.classList.add("active");
   }
   document.querySelectorAll(".nav-item[data-view]").forEach(function (el) {
     el.addEventListener("click", function () { switchView(el.dataset.view); closeNav(); });
+  });
+  document.querySelectorAll(".tab-item[data-view]").forEach(function (el) {
+    el.addEventListener("click", function () { switchView(el.dataset.view); });
+  });
+
+  /* ============================================================
+     PERFIL — meus dados, configurações, sobre
+  ============================================================ */
+  function renderPerfilHeader(user) {
+    var nome = currentProfile.name || user.email;
+    document.getElementById("perfil-avatar").textContent = nome.charAt(0).toUpperCase();
+    document.getElementById("perfil-nome-atual").textContent = nome;
+    document.getElementById("perfil-email-atual").textContent = user.email;
+    document.getElementById("perfil-nome-input").value = currentProfile.name || "";
+    document.getElementById("cfg-notify-listas").checked = currentProfile.notifyListas !== false;
+  }
+
+  document.getElementById("btn-salvar-meu-nome").addEventListener("click", function () {
+    var nome = document.getElementById("perfil-nome-input").value.trim();
+    if (!nome) { toast("Digite um nome."); return; }
+    db.collection("users").doc(currentUid).update({ name: nome }).then(function () {
+      currentProfile.name = nome;
+      document.getElementById("user-name").textContent = nome;
+      document.getElementById("user-initial").textContent = nome.charAt(0).toUpperCase();
+      renderPerfilHeader(auth.currentUser);
+      toast("Nome atualizado.");
+    }).catch(function () {
+      toast("Erro ao salvar nome.");
+    });
+  });
+
+  document.getElementById("cfg-notify-listas").addEventListener("change", function (e) {
+    currentProfile.notifyListas = e.target.checked;
+    db.collection("users").doc(currentUid).update({ notifyListas: e.target.checked }).catch(function () {
+      toast("Erro ao salvar configuração.");
+    });
+  });
+
+  document.getElementById("btn-sair-perfil").addEventListener("click", function () {
+    auth.signOut();
+  });
+
+  /* ---------- versão do app / aviso de atualização ---------- */
+  document.getElementById("sobre-versao-atual").textContent = APP_VERSION;
+
+  document.getElementById("btn-atualizar-agora").addEventListener("click", function () {
+    location.reload();
+  });
+
+  db.collection("config").doc("app").onSnapshot(function (snap) {
+    var data = snap.exists ? snap.data() : {};
+    var desatualizado = !!data.latestVersionUser && data.latestVersionUser !== APP_VERSION;
+    document.getElementById("update-banner").classList.toggle("hidden", !desatualizado);
   });
 
   /* ============================================================
