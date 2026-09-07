@@ -1,5 +1,9 @@
 {
-  "appId": "com.babalindaoourdeus.usuario",
-  "appName": "baba lindao filhos ",
-  "webDir": "www"
+  "appId": "com.babalindaodeus.usuario",
+  "appName": "Baba Lindao Deus",
+  "webDir": "www",
+  "server": {
+    "url": "https://narayankosloski.github.io/filhoslistaacesso/",
+    "cleartext": false
+  }
 }
